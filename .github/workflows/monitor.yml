@@ -1,0 +1,47 @@
+name: Yahoo Realtime Monitor
+
+on:
+  schedule:
+    # 1時間ごとに実行（カスタマイズポイント1）
+    # 分 時 日 月 曜日（UTC時間）
+    # 例: '0 * * * *' = 毎時0分に実行
+    # 例: '*/30 * * * *' = 30分ごとに実行
+    # 例: '0 */2 * * *' = 2時間ごとに実行
+    - cron: '0 * * * *'  # 1時間ごと
+  
+  # 手動実行も可能にする
+  workflow_dispatch:
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      with:
+        # 前回のキャッシュを保持するために必要
+        persist-credentials: true
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'  # Pythonバージョン（カスタマイズポイント2）
+    
+    - name: Install dependencies
+      run: |
+        pip install requests beautifulsoup4
+    
+    - name: Run monitor script
+      env:
+        LINE_NOTIFY_TOKEN: ${{ secrets.LINE_NOTIFY_TOKEN }}
+      run: |
+        python yahoo_realtime_monitor.py
+    
+    - name: Commit and push cache
+      run: |
+        git config --local user.email "github-actions[bot]@users.noreply.github.com"
+        git config --local user.name "github-actions[bot]"
+        git add last_posts.json || true
+        git diff --quiet && git diff --staged --quiet || git commit -m "Update cache [skip ci]"
+        git push || true
